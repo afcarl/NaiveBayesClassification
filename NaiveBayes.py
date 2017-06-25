@@ -1,13 +1,11 @@
-#package lin567_p1
 
 import labels
 import numpy as np
 
-
 class NaiveBayes :
   # Use these to compute P( Language )
 
-  docLanguageCounts ={}
+  docLanguageCounts = {}
   docCount = 0
 
   #Use these to compute P( Word | Language )
@@ -17,7 +15,6 @@ class NaiveBayes :
   #This should increment counts so you can compute P( Language ) and P( Word | Language )
 
   def train(self,corpus):
-
    totaldoccount = 0
    languagecountmap = {}
 
@@ -25,61 +22,58 @@ class NaiveBayes :
    # the document text as an Array[String], and the language as a Language
    for doc in corpus:
      totaldoccount +=1
-     if doc in languagecountmap:
+     if doc.language in languagecountmap:
          languagecountmap[doc.language] += 1
      else:
          languagecountmap[doc.language] = 1
 
    for key in languagecountmap:
-       self.docLanguageCounts[key] = float(languagecountmap[key])/float(totaldoccount)
+        self.docLanguageCounts[key] = float(languagecountmap[key])/float(totaldoccount)
+
 
    for doc in corpus:
-       for word in doc.text:
-           if word in self.languageWordCounts:
-               self.languageWordCounts[(doc.language,word)] += 1
+       for ngram in doc.text:
+           if (doc.language,ngram) in self.languageWordCounts:
+               self.languageWordCounts[(doc.language,ngram)] += 1
            else:
-               self.languageWordCounts[(doc.language,word)]  = 1
+               self.languageWordCounts[(doc.language,ngram)] = 1
 
            if doc.language in self.wordCountsInOneLanguageMap:
-               self.wordCountsInOneLanguageMap[doc.language]+= 1
+               self.wordCountsInOneLanguageMap[doc.language] += 1
            else:
                self.wordCountsInOneLanguageMap[doc.language] = 1
 
 
+
+
   #Should compute P(word|language).Implement with add-lambda smoothing.
   def p_wordGivenLg(self,word,language,lamda):
-    val = ((self.languageWordCounts[(word,language)]) + lamda)/((self.wordCountsInOneLanguageMap[language])+lamda*len(self.docLanguageCounts))
-    return val
+     val = 0.0
+     count = 0.0
+     totalcount = 0.0
+     totallanguages = len(self.docLanguageCounts)
 
-  #Should compute P(Language)
-  #def p_Lg(self,language):
-   # return self.docLanguageCounts[language]
+     if(language,word) in self.languageWordCounts:
+        count = self.languageWordCounts[(language, word)]
 
+     totalcount =  self.wordCountsInOneLanguageMap[language]
 
-  # Should compute P( Word, Language )= P( Language )\prod_{Word in Document}P( Word | Language )
-  #def p_docAndLg(doc,language,lamda):
-    #a = 0
+     val = float(count+lamda)/float(totalcount+(lamda*totallanguages))
+
+     return val
+
 
 
   #This function takes a document as a parameter, and returns the highest scoring language as a
   #Language object.
-
   def mostLikelyLanguage(self,doc,lamda):
 
     # Loop over the possible languages (they should accessible in docLanguageCounts.keys), and find
     # the language with the highest P( Document, Language ) score
-    maxscorelanguage = ""
-    maxscore = 0
+    score = {}
     for lang in self.docLanguageCounts:
-        score = self.docLanguageCounts[lang]
+        score[lang] = np.log(self.docLanguageCounts[lang])
         for word in doc.text:
-            score *= self.p_wordGivenLg(self,word,lang,lamda)
-        if score > maxscore:
-           maxscore = score
-           maxscorelanguage = lang
-
-    return maxscorelanguage
-
-
-
-
+            val = self.p_wordGivenLg(word, lang, lamda)
+            score[lang] += np.log(float(val))
+    return max(score, key=score.get)
